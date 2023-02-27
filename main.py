@@ -1,11 +1,20 @@
-import usb
-
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press Ctrl+F8 to toggle the breakpoint.
+import serial.tools.list_ports
+import serial
 
 
-# Press the green button in the gutter to run the script.
 if __name__ == '__main__':
-    print_hi('PyCharm')
+    ports = serial.tools.list_ports.comports()
+    possible_ports = {}
+    for port, desc, hwid in sorted(ports):
+        if not port in possible_ports:
+            possible_ports[port] = hwid
+    for key in possible_ports:
+        SerialObj = serial.Serial('COM3')
+        SerialObj.baudrate = 9600  # set Baud rate to 9600
+        SerialObj.bytesize = 8  # Number of data bits = 8
+        SerialObj.parity = 'N'  # No parity
+        SerialObj.stopbits = 1
+        SerialObj.write(0x0b01)
+        s = SerialObj.read()
+        print(s)
 

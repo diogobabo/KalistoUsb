@@ -15,7 +15,7 @@ class Kallisto:
     def __del__(self):
         self.SerialObj.close()
 
-    def __write(self, data):
+    def write(self, data):
         self.SerialObj.write(bytes(data))
 
     def read(self):
@@ -35,17 +35,7 @@ class Kallisto:
             status = 0x00
         if self.dict[sensor] == 0x01 or self.dict[sensor] == 0x02 or self.dict[sensor] == 0x03:
             interval = interval * 1000
-        interval = hex(interval)
-        interval = interval[2:]
-        size = len(interval)
-        if size < 8:
-            interval = '0' * (8 - size) + interval
-        elif size > 8:
-            interval = interval[:8]
-        interval = '0x' + interval
-        an_integer = int(interval, 16)
-        interval = hex(an_integer)
-        self.__write([0x05, self.dict[sensor], status, interval])
+        self.write([0x05, self.dict[sensor], status] + list(interval.to_bytes(4, 'big')))
 
 
 if __name__ == '__main__':
@@ -56,7 +46,17 @@ if __name__ == '__main__':
         if "SER" in hwid:
             possible_ports[port] = hwid
 
-    sensor = Kallisto(port, 'COM3')
+    sensor = Kallisto('COM3', possible_ports['COM3'])
+    sensor.set_sensor('eco2', True, 1000)
+    lista = sensor.read()
+    print(lista)
+    time.sleep(1)
     sensor.write([0x0b, 0x01])
+    lista = sensor.read()
+    print(lista)
+    sensor.set_sensor('eco2', False, 1000)
+    time.sleep(1)
+    sensor.write([0x0b, 0x01])
+    time.sleep(1)
     lista = sensor.read()
     print(lista)

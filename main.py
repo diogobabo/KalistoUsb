@@ -11,6 +11,7 @@ def string_to_hex(hexa):
     hexa = hex(an_integer)
     return hexa
 
+
 def convert_to_hex(month, day, year, weekday, hour, minute, second, centisecond):
     hex_month = list(month.to_bytes(1, 'big'))
     hex_day = list(day.to_bytes(1, 'big'))
@@ -23,13 +24,15 @@ def convert_to_hex(month, day, year, weekday, hour, minute, second, centisecond)
 
     return hex_month + hex_day + hex_year + hex_weekday + hex_hour + hex_minute + hex_second + hex_centisecond
 
+
 class Kallisto:
     def __init__(self, port, hwid):
         self.Port = port
         self.hwid = hwid
         self.SerialObj = serial.Serial(port)
         self.SerialObj.timeout = 0.1
-        self.dict = {'accel': 0x01, 'gyroscope': 0x02, 'magnet': 0x03, 'temp': 0x04, 'pressure': 0x05, 'humidity': 0x06, 'eco2': 0x07, 'tvoc': 0x08,'light': 0x09, 'bvoc': 0x0a, 'iaq': 0x0b, 'noise': 0x0c, 'micro': 0x0d}
+        self.dict = {'accel': 0x01, 'gyroscope': 0x02, 'magnet': 0x03, 'temp': 0x04, 'pressure': 0x05, 'humidity': 0x06,
+                     'eco2': 0x07, 'tvoc': 0x08, 'light': 0x09, 'bvoc': 0x0a, 'iaq': 0x0b, 'noise': 0x0c, 'micro': 0x0d}
 
     def __del__(self):
         self.SerialObj.close()
@@ -47,7 +50,7 @@ class Kallisto:
                 break
         return result
 
-    #3.5 (sensor_name, true/false (enable,disable), time)
+    # 3.5 (sensor_name, true/false (enable,disable), time)
     def set_sensor(self, sensor, status, interval):
         if status:
             status = 0x01
@@ -57,8 +60,7 @@ class Kallisto:
             interval = interval * 1000
         self.write([0x05, self.dict[sensor], status] + list(interval.to_bytes(4, 'big')))
 
-
-    #3.3 (sensor_name, true/false (enable,disable))
+    # 3.3 (sensor_name, true/false (enable,disable))
     def set_stream(self, sensor, status):
         if status:
             status = 0x01
@@ -77,7 +79,7 @@ class Kallisto:
     def set_rtc(self, month, day, year, weekday, hour, minutes, seconds, centiseconds):
         self.write([0x07] + convert_to_hex(month, day, year, weekday, hour, minutes, seconds, centiseconds))
         res = self.read()
-        if res != ['18','00','0a']:
+        if res != ['18', '00', '0a']:
             return False
         return True
 
@@ -86,7 +88,6 @@ class Kallisto:
         self.write([0x08, 0x01])
         res = self.read()
         return res
-
 
 
 if __name__ == '__main__':
@@ -99,5 +100,11 @@ if __name__ == '__main__':
             possible_ports[port] = hwid
 
     sensor = Kallisto('COM3', possible_ports['COM3'])
-    sensor.set_rtc(3, 2, 23, 5, 16, 40, 20, 50)
-    print(sensor.get_rtc())
+    sensor.set_sensor('accel', True, 100)
+    print(sensor.read())
+    timeleft = time.time() + 3
+    while True:
+        print(sensor.read())
+        if timeleft == 0:
+            break
+        timeleft = timeleft - time.time()

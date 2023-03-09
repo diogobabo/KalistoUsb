@@ -139,7 +139,6 @@ class Kallisto:
     def set_erase(self, path_length, path):
         self.write([0x06, path_length, path])
         res = self.read()
-        print("ok")
         print(res)
         return False
 
@@ -233,8 +232,8 @@ if __name__ == '__main__':
 
     sensor = Kallisto('COM3', possible_ports['COM3'])
     #sensor.set_sensor('accel', False, 100)
-    sensor.set_calibration('accel')
-    
+    #sensor.set_calibration('accel')
+
     """
     timeleft = time.time() + 3
   

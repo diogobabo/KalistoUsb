@@ -5,9 +5,6 @@ import serial.tools.list_ports
 import serial
 
 
-
-
-
 # Auxiliary Functions
 
 # Convert a string to hex
@@ -48,23 +45,32 @@ class Kallisto:
 
     def read(self):
         result = []
+        a = time.time()
         while True:
             readOut = self.SerialObj.read()
             if readOut:
                 result.append(bytes.hex(readOut, ' '))
             else:
-                break
+                if len(result) > 0 and result[-1] == '0a':
+                    break
+                elif len(result) == 0 and time.time() - a > 2:
+                    print("Timeout")
+                    return False
+                elif time.time() - a > 5:
+                    print("Timeout")
+                    return False
         return result
     
 
     # 3.1 Set Storage
     # Enables and disables data storage in Kallisto. Each sensor is enabled separately. Sensor ID and Filename must be provided.
-    def set_storage(self, sensor, status, length, filename):
+    def set_storage(self, sensorID, status, filename):
         if status:
             status = 0x01
         else:
             status = 0x00
-        self.write([0x01, self.dict[sensor], status, length, 0x74, 0x2e])
+        filename = filename.encode('ascii', 'replace')
+        self.write([0x01, self.dict[sensorID], status] + list(len(filename).to_bytes(1, 'big')) + [x for x in filename])
         res = self.read()
         print(res)
         if res != ['02', '00', '0a']:
@@ -135,7 +141,7 @@ class Kallisto:
     # 3.6 SET Erase
     # Requests Kallisto to erase file from its default storage method
 
-    # TO DO
+    # TODO
     def set_erase(self, path_length, path):
         self.write([0x06, path_length, path])
         res = self.read()
@@ -176,7 +182,7 @@ class Kallisto:
     # 3.10 GET Storage List
     # Requests Kallisto to provide list of files in the root directory of the default storage method.
 
-    # TO DO
+    # TODO
     def get_storage_list(self):
         self.write([0x0a, 0x01])
         res = self.read()
@@ -187,7 +193,7 @@ class Kallisto:
     # Requests Kallisto to provide the current status of each sensor. 
     # Including: if the sensor is enabled, if the sensor data is being stored, if the sensor data is being streamed and the current sampling period.
 
-    # TO DO
+    # TODO
     def get_status(self):
         self.write([0x0b, 0x01])
         res = self.read()
@@ -231,9 +237,9 @@ if __name__ == '__main__':
             possible_ports[port] = hwid
 
     sensor = Kallisto('COM3', possible_ports['COM3'])
-    #sensor.set_sensor('accel', False, 100)
     #sensor.set_calibration('accel')
-
+    sensor.set_storage('accel', True, 'test.txt')
+    sensor.set_storage('accel', False, 'test.txt')
     """
     timeleft = time.time() + 3
   

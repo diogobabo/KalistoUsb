@@ -198,13 +198,6 @@ class Kallisto:
     # 3.11 GET Status
     # Requests Kallisto to provide the current status of each sensor. 
     # Including: if the sensor is enabled, if the sensor data is being stored, if the sensor data is being streamed and the current sampling period.
-    """['00', '01', '01', '00', '01', '86', 'a0', '00', '00', '00', '00', '00', '00', '00', '00', '00', '00', '00', '00',
-     '00', '00', '00', '00', '00', '00', '00', '00', '00', '00', '00', '00', '00', '00', '00', '00', '00', '00', '00',
-     '00', '00', '00', '00', '00', '00', '00', '00', '00', '00', '00', '00', '00', '00', '00', '00', '00', '00', '00',
-     '00', '00', '00', '00', '00', '00', '00', '00', '00', '00', '00', '00', '00', '00', '00', '00', '00', '00', '00',
-     '00', '00', '00', '00', '00', '00', '00', '00', '00', '00', '00', '00', '00', '00', '00']"""
-
-    # TODO
     def get_status(self):
         dict = {0: 'accel', 1: 'gyroscope', 2: 'magnet', 3: 'temp', 4: 'pressure', 5: 'humidity',
                 6: 'eco2', 7: 'tvoc', 8: 'light', 9: 'bvoc', 10: 'iaq', 11: 'noise', 12: 'micro'}

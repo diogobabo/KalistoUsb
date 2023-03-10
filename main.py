@@ -5,9 +5,6 @@ import serial.tools.list_ports
 import serial
 
 
-
-
-
 # Auxiliary Functions
 
 # Convert a string to hex
@@ -55,7 +52,6 @@ class Kallisto:
             else:
                 break
         return result
-    
 
     # 3.1 Set Storage
     # Enables and disables data storage in Kallisto. Each sensor is enabled separately. Sensor ID and Filename must be provided.
@@ -74,13 +70,12 @@ class Kallisto:
 
     # 3.2 Get Storage 
     # Requests Kallisto to send data in the file with the provided Filename
+    ## TODO
     def get_storage(self, length, filename):
-        self.write([0x03, length, filename])
+        self.write([0x02, length, filename])
         res = self.read()
         print(res)
         return True
-
-
 
     # 3.3 (sensor_name, true/false (enable,disable))
     def set_stream(self, sensor, status):
@@ -97,8 +92,11 @@ class Kallisto:
             return False
         return True
 
+    # 3.4 SET Internet Connection
+    # Configures connection between Kallisto and the internet or MQTT Broker
 
-    # 3.5 (sensor_name, true/false (enable,disable), time)
+    # 3.5 SET Sensor
+    # Requests Kallisto to enable/disable a sensor with the provided Sensor ID and Sampling
     def set_sensor(self, sensor, status, interval):
         if status:
             status = 0x01
@@ -109,18 +107,19 @@ class Kallisto:
         self.write([0x05, self.dict[sensor], status] + list(interval.to_bytes(4, 'big')))
         res = self.read()
         success = True
+        print(res)
         for i in range(len(res)):
             if (i == 0):
                 if res[i] != '12':
                     success = False
-  
+
             elif i == 14:
                 if res[i] != '0a':
                     success = False
             elif res[i] != '00':
                 print("Error Code: " + str(i) + " , Flag " + res[i])
                 success = False
-            
+
         if success:
             if status:
                 print("Sensor: " + sensor + " successfully enabled!")
@@ -130,8 +129,6 @@ class Kallisto:
             print("Error setting sensor: " + sensor)
         return success
 
-        
-        
     # 3.6 SET Erase
     # Requests Kallisto to erase file from its default storage method
 
@@ -142,7 +139,6 @@ class Kallisto:
         print(res)
         return False
 
-    
     # 3.7
     def set_rtc(self, month, day, year, weekday, hour, minutes, seconds, centiseconds):
         self.write([0x07] + convert_to_hex(month, day, year, weekday, hour, minutes, seconds, centiseconds))
@@ -163,16 +159,16 @@ class Kallisto:
         self.write([0x09, 0x01])
         res = self.read()
         print(res)
-        if (res[0] != '1e' or  res[3] != '0a'):
+        if (res[0] != '1e' or res[3] != '0a'):
             print("Error getting battery")
             return False
         soc = res[1]
         status = res[2]
         print("Battery: " + str(soc) + "%")
         print("Charging..." if status == '01' else "Not charging...")
-        
+
         return True
-    
+
     # 3.10 GET Storage List
     # Requests Kallisto to provide list of files in the root directory of the default storage method.
 
@@ -182,17 +178,26 @@ class Kallisto:
         res = self.read()
         print(res)
         return False
-    
+
     # 3.11 GET Status
     # Requests Kallisto to provide the current status of each sensor. 
     # Including: if the sensor is enabled, if the sensor data is being stored, if the sensor data is being streamed and the current sampling period.
 
     # TO DO
     def get_status(self):
+        dict = {'0': 'accel', '1': 'gyroscope', '2': 'magnet', '3': 'temp', '4': 'pressure', '5': 'humidity',
+                '6': 'eco2', '7': 'tvoc', '8': 'light', '9': 'bvoc', '10': 'iaq', '11': 'noise', '12': 'micro'}
         self.write([0x0b, 0x01])
         res = self.read()
         print(res)
-        return False
+        """for i in range(0, len(res), 7):
+            print("Sensor: " + dict[res[i]])
+            print("Enabled: " + str(bool(int(res[i + 1], 16))))
+            print("Streaming: " + str(bool(int(res[i + 2], 16))))
+            print("Storage: " + str(bool(int(res[i + 3], 16))))
+            print("Sampling Period: " + str(int.from_bytes(bytes.fromhex(res[i + 4] + res[i + 5] + res[i + 6]), 'big')))
+
+        return False"""
 
     # 3.12 SET Calibration
 
@@ -206,19 +211,16 @@ class Kallisto:
                     success = False
             elif i == 14:
                 if res[i] != '0a':
-                    success = False   
+                    success = False
             elif res[i] != '00':
                 print("Error calibrating sensor: " + sensor)
                 success = False
-                
+
         if success:
             print("Sensor: " + sensor + " successfully calibrated!")
             return True
         else:
             return False
-        
-
-      
 
 
 if __name__ == '__main__':
@@ -229,10 +231,11 @@ if __name__ == '__main__':
     for port, desc, hwid in sorted(ports):
         if "SER" in hwid:
             possible_ports[port] = hwid
-
+    print(possible_ports)
     sensor = Kallisto('COM3', possible_ports['COM3'])
-    #sensor.set_sensor('accel', False, 100)
-    #sensor.set_calibration('accel')
+    # sensor.set_sensor('accel', False, 100)
+    # sensor.set_calibration('accel')
+    sensor.get_status()
 
     """
     timeleft = time.time() + 3
@@ -243,7 +246,3 @@ if __name__ == '__main__':
             break
         timeleft = timeleft - time.time()
         """
-
-
-        
-        

@@ -80,11 +80,12 @@ class Kallisto:
 
     # 3.2 Get Storage 
     # Requests Kallisto to send data in the file with the provided Filename
-    def get_storage(self, length, filename):
-        self.write([0x03, length, filename])
+    def get_storage(self, filename):
+        filename = filename.encode('ascii', 'replace')
+        self.write([0x03] + list(len(filename).to_bytes(1, 'big')) + [x for x in filename])
         res = self.read()
         print(res)
-        return True
+        return res
 
 
 
@@ -103,16 +104,17 @@ class Kallisto:
             return False
         return True
 
+    # 3.3 SET Internet Connection TODO
 
     # 3.5 (sensor_name, true/false (enable,disable), time)
-    def set_sensor(self, sensor, status, interval):
+    def set_sensor(self, sensorID, status, interval):
         if status:
             status = 0x01
         else:
             status = 0x00
-        if self.dict[sensor] == 0x01 or self.dict[sensor] == 0x02 or self.dict[sensor] == 0x03:
+        if self.dict[sensorID] == 0x01 or self.dict[sensorID] == 0x02 or self.dict[sensorID] == 0x03:
             interval = interval * 1000
-        self.write([0x05, self.dict[sensor], status] + list(interval.to_bytes(4, 'big')))
+        self.write([0x05, self.dict[sensorID], status] + list(interval.to_bytes(4, 'big')))
         res = self.read()
         success = True
         for i in range(len(res)):
@@ -129,11 +131,11 @@ class Kallisto:
             
         if success:
             if status:
-                print("Sensor: " + sensor + " successfully enabled!")
+                print("Sensor: " + sensorID + " successfully enabled!")
             else:
-                print("Sensor: " + sensor + " successfully disabled!")
+                print("Sensor: " + sensorID + " successfully disabled!")
         else:
-            print("Error setting sensor: " + sensor)
+            print("Error setting sensor: " + sensorID)
         return success
 
         
@@ -142,11 +144,14 @@ class Kallisto:
     # Requests Kallisto to erase file from its default storage method
 
     # TODO
-    def set_erase(self, path_length, path):
-        self.write([0x06, path_length, path])
+    def set_erase(self, sensorID, path):
+        path = path.encode('ascii', 'replace')
+        self.write([0x06, self.dict[sensorID]] + list(len(path).to_bytes(1, 'big')) + [x for x in path])
         res = self.read()
         print(res)
-        return False
+        if res != ['15', '00', '0a']:
+            return False
+        return True
 
     
     # 3.7
@@ -177,7 +182,7 @@ class Kallisto:
         print("Battery: " + str(soc) + "%")
         print("Charging..." if status == '01' else "Not charging...")
         
-        return True
+        return res
     
     # 3.10 GET Storage List
     # Requests Kallisto to provide list of files in the root directory of the default storage method.
@@ -187,7 +192,7 @@ class Kallisto:
         self.write([0x0a, 0x01])
         res = self.read()
         print(res)
-        return False
+        return res
     
     # 3.11 GET Status
     # Requests Kallisto to provide the current status of each sensor. 

@@ -198,7 +198,7 @@ class Kallisto:
         self.write([0x0b, 0x01])
         res = self.read()
         print(res)
-        return False
+        return res
 
     # 3.12 SET Calibration
 
@@ -238,8 +238,11 @@ if __name__ == '__main__':
 
     sensor = Kallisto('COM3', possible_ports['COM3'])
     #sensor.set_calibration('accel')
-    sensor.set_storage('accel', True, 'test.txt')
-    sensor.set_storage('accel', False, 'test.txt')
+    sensor.set_sensor('accel', True, 100)
+    sensor.get_status()
+    sensor.set_sensor('accel', False, 100)
+    #sensor.set_storage('accel', True, 'test.txt')
+    #sensor.set_storage('accel', False, 'test.txt')
     """
     timeleft = time.time() + 3
   

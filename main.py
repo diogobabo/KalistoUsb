@@ -1,6 +1,6 @@
 import time
 from time import sleep
-
+import cbor2
 import serial.tools.list_ports
 import serial
 
@@ -90,18 +90,22 @@ class Kallisto:
 
 
     # 3.3 (sensor_name, true/false (enable,disable))
-    def set_stream(self, sensor, status):
+    def set_stream(self, sensorID, status):
         if status:
             status = 0x01
         else:
             status = 0x00
 
-        self.write([0x03, self.dict[sensor], status])
+        self.write([0x03, self.dict[sensorID], status])
 
         res = self.read()
-        print(res)
+
         if res != ['09', '00', '0a']:
             return False
+        if status:
+            print("Sensor: " + sensorID + " stream successfully enabled!")
+        else:
+            print("Sensor: " + sensorID + " stream successfully disabled!")
         return True
 
     # 3.3 SET Internet Connection TODO
@@ -228,7 +232,14 @@ class Kallisto:
         else:
             return False
         
-
+    def get_stream(self):
+        read = b''
+        while True:
+            bytesWaiting = sensor.SerialObj.inWaiting()
+            if bytesWaiting > 0:
+                read = read + sensor.SerialObj.read(bytesWaiting)
+                break
+        return read
       
 
 
@@ -242,9 +253,7 @@ if __name__ == '__main__':
             possible_ports[port] = hwid
 
     sensor = Kallisto('COM3', possible_ports['COM3'])
-    #sensor.set_calibration('accel')
     sensor.set_sensor('accel', True, 100)
-    sensor.get_status()
     sensor.set_sensor('accel', False, 100)
     #sensor.set_storage('accel', True, 'test.txt')
     #sensor.set_storage('accel', False, 'test.txt')

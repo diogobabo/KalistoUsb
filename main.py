@@ -79,12 +79,12 @@ class Kallisto:
 
     # 3.2 Get Storage 
     # Requests Kallisto to send data in the file with the provided Filename
-    ## TODO
-    def get_storage(self, length, filename):
-        self.write([0x02, length, filename])
+    def get_storage(self, filename):
+        filename = filename.encode('ascii', 'replace')
+        self.write([0x03] + list(len(filename).to_bytes(1, 'big')) + [x for x in filename])
         res = self.read()
         print(res)
-        return True
+        return res
 
     # 3.3 (sensor_name, true/false (enable,disable))
     def set_stream(self, sensor, status):
@@ -101,19 +101,22 @@ class Kallisto:
             return False
         return True
 
+
     # 3.4 SET Internet Connection
     # Configures connection between Kallisto and the internet or MQTT Broker
 
     # 3.5 SET Sensor
     # Requests Kallisto to enable/disable a sensor with the provided Sensor ID and Sampling
-    def set_sensor(self, sensor, status, interval):
+
+    def set_sensor(self, sensorID, status, interval):
+
         if status:
             status = 0x01
         else:
             status = 0x00
-        if self.dict[sensor] == 0x01 or self.dict[sensor] == 0x02 or self.dict[sensor] == 0x03:
+        if self.dict[sensorID] == 0x01 or self.dict[sensorID] == 0x02 or self.dict[sensorID] == 0x03:
             interval = interval * 1000
-        self.write([0x05, self.dict[sensor], status] + list(interval.to_bytes(4, 'big')))
+        self.write([0x05, self.dict[sensorID], status] + list(interval.to_bytes(4, 'big')))
         res = self.read()
         success = True
 
@@ -131,22 +134,25 @@ class Kallisto:
 
         if success:
             if status:
-                print("Sensor: " + sensor + " successfully enabled!")
+                print("Sensor: " + sensorID + " successfully enabled!")
             else:
-                print("Sensor: " + sensor + " successfully disabled!")
+                print("Sensor: " + sensorID + " successfully disabled!")
         else:
-            print("Error setting sensor: " + sensor)
+            print("Error setting sensor: " + sensorID)
         return success
 
     # 3.6 SET Erase
     # Requests Kallisto to erase file from its default storage method
 
     # TODO
-    def set_erase(self, path_length, path):
-        self.write([0x06, path_length, path])
+    def set_erase(self, sensorID, path):
+        path = path.encode('ascii', 'replace')
+        self.write([0x06, self.dict[sensorID]] + list(len(path).to_bytes(1, 'big')) + [x for x in path])
         res = self.read()
         print(res)
-        return False
+        if res != ['15', '00', '0a']:
+            return False
+        return True
 
     # 3.7
     def set_rtc(self, month, day, year, weekday, hour, minutes, seconds, centiseconds):
@@ -176,7 +182,8 @@ class Kallisto:
         print("Battery: " + str(soc) + "%")
         print("Charging..." if status == '01' else "Not charging...")
 
-        return True
+        return res
+    
 
     # 3.10 GET Storage List
     # Requests Kallisto to provide list of files in the root directory of the default storage method.
@@ -186,7 +193,7 @@ class Kallisto:
         self.write([0x0a, 0x01])
         res = self.read()
         print(res)
-        return False
+        return res
 
     # 3.11 GET Status
     # Requests Kallisto to provide the current status of each sensor. 
@@ -209,8 +216,6 @@ class Kallisto:
             print("Error getting status")
             return False
 
-
-        print(res)
         res.pop()
         res.pop(0)
         idx = 0
@@ -227,6 +232,7 @@ class Kallisto:
             idx += 1
 
         return res_dict
+
 
     # 3.12 SET Calibration
 
@@ -263,7 +269,7 @@ if __name__ == '__main__':
     print(possible_ports)
     sensor = Kallisto('COM3', possible_ports['COM3'])
 
-    sensor.set_sensor('accel', True, 100)
+    """sensor.set_sensor('accel', True, 100)
     sensor.set_sensor('magnet', True, 100)
     sensor.set_sensor('temp', True, 100)
     #sensor.set_sensor('pressure', True, 100)
@@ -279,11 +285,10 @@ if __name__ == '__main__':
     #sensor.set_sensor('pressure', False, 100)
     sensor.set_sensor('humidity', False, 100)
     sensor.set_sensor('eco2', False, 100)
-    #sensor.set_sensor('tvoc', False, 100)
+    #sensor.set_sensor('tvoc', False, 100)"""
 
-    #sensor.set_calibration('accel')
-    #sensor.set_storage('accel', True, 'test.txt')
-    #sensor.set_storage('accel', False, 'test.txt')
+
+
 
     """
     timeleft = time.time() + 3

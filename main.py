@@ -45,22 +45,31 @@ class Kallisto:
 
     def read(self):
         result = []
+        a = time.time()
         while True:
             readOut = self.SerialObj.read()
             if readOut:
                 result.append(bytes.hex(readOut, ' '))
             else:
-                break
+                if len(result) > 0 and result[-1] == '0a':
+                    break
+                elif len(result) == 0 and time.time() - a > 2:
+                    print("Timeout")
+                    return False
+                elif time.time() - a > 5:
+                    print("Timeout")
+                    return False
         return result
 
     # 3.1 Set Storage
     # Enables and disables data storage in Kallisto. Each sensor is enabled separately. Sensor ID and Filename must be provided.
-    def set_storage(self, sensor, status, length, filename):
+    def set_storage(self, sensorID, status, filename):
         if status:
             status = 0x01
         else:
             status = 0x00
-        self.write([0x01, self.dict[sensor], status, length, 0x74, 0x2e])
+        filename = filename.encode('ascii', 'replace')
+        self.write([0x01, self.dict[sensorID], status] + list(len(filename).to_bytes(1, 'big')) + [x for x in filename])
         res = self.read()
         print(res)
         if res != ['02', '00', '0a']:
@@ -107,7 +116,7 @@ class Kallisto:
         self.write([0x05, self.dict[sensor], status] + list(interval.to_bytes(4, 'big')))
         res = self.read()
         success = True
-        print(res)
+
         for i in range(len(res)):
             if (i == 0):
                 if res[i] != '12':
@@ -132,7 +141,7 @@ class Kallisto:
     # 3.6 SET Erase
     # Requests Kallisto to erase file from its default storage method
 
-    # TO DO
+    # TODO
     def set_erase(self, path_length, path):
         self.write([0x06, path_length, path])
         res = self.read()
@@ -172,7 +181,7 @@ class Kallisto:
     # 3.10 GET Storage List
     # Requests Kallisto to provide list of files in the root directory of the default storage method.
 
-    # TO DO
+    # TODO
     def get_storage_list(self):
         self.write([0x0a, 0x01])
         res = self.read()
@@ -182,22 +191,42 @@ class Kallisto:
     # 3.11 GET Status
     # Requests Kallisto to provide the current status of each sensor. 
     # Including: if the sensor is enabled, if the sensor data is being stored, if the sensor data is being streamed and the current sampling period.
+    """['00', '01', '01', '00', '01', '86', 'a0', '00', '00', '00', '00', '00', '00', '00', '00', '00', '00', '00', '00',
+     '00', '00', '00', '00', '00', '00', '00', '00', '00', '00', '00', '00', '00', '00', '00', '00', '00', '00', '00',
+     '00', '00', '00', '00', '00', '00', '00', '00', '00', '00', '00', '00', '00', '00', '00', '00', '00', '00', '00',
+     '00', '00', '00', '00', '00', '00', '00', '00', '00', '00', '00', '00', '00', '00', '00', '00', '00', '00', '00',
+     '00', '00', '00', '00', '00', '00', '00', '00', '00', '00', '00', '00', '00', '00', '00']"""
 
-    # TO DO
+    # TODO
     def get_status(self):
-        dict = {'0': 'accel', '1': 'gyroscope', '2': 'magnet', '3': 'temp', '4': 'pressure', '5': 'humidity',
-                '6': 'eco2', '7': 'tvoc', '8': 'light', '9': 'bvoc', '10': 'iaq', '11': 'noise', '12': 'micro'}
+        dict = {0: 'accel', 1: 'gyroscope', 2: 'magnet', 3: 'temp', 4: 'pressure', 5: 'humidity',
+                6: 'eco2', 7: 'tvoc', 8: 'light', 9: 'bvoc', 10: 'iaq', 11: 'noise', 12: 'micro'}
+
+
         self.write([0x0b, 0x01])
         res = self.read()
-        print(res)
-        """for i in range(0, len(res), 7):
-            print("Sensor: " + dict[res[i]])
-            print("Enabled: " + str(bool(int(res[i + 1], 16))))
-            print("Streaming: " + str(bool(int(res[i + 2], 16))))
-            print("Storage: " + str(bool(int(res[i + 3], 16))))
-            print("Sampling Period: " + str(int.from_bytes(bytes.fromhex(res[i + 4] + res[i + 5] + res[i + 6]), 'big')))
+        if res[0] != '23' and res[-1] != '0a':
+            print("Error getting status")
+            return False
 
-        return False"""
+
+        print(res)
+        res.pop()
+        res.pop(0)
+        idx = 0
+        res_dict = {}
+
+        for i in range(0, len(res), 7):
+            dict_aux = {}
+            dict_aux['Storage'] =  str(res[i])
+            dict_aux['Stream'] = str(res[i+1])
+            dict_aux['Sensor'] = str(res[i+2])
+            dict_aux['Frequency'] = str(res[i+3]) + " " + str(res[i+4]) + " " + str(res[i+5]) + " " + str(res[i+6])
+            res_dict[dict[idx]] = dict_aux
+            print("Sensor: " + dict[idx] + "; Storage: " + str(res[i]) + ", Stream: " + str(res[i+1]) + ", Sensor: " + str(res[i+2]) + ", Frequency: " + str(res[i+3]) + " " + str(res[i+4]) + " " + str(res[i+5]) + " " + str(res[i+6]) + "\n")
+            idx += 1
+
+        return res_dict
 
     # 3.12 SET Calibration
 
@@ -233,9 +262,28 @@ if __name__ == '__main__':
             possible_ports[port] = hwid
     print(possible_ports)
     sensor = Kallisto('COM3', possible_ports['COM3'])
-    # sensor.set_sensor('accel', False, 100)
+
+    sensor.set_sensor('accel', True, 100)
+    sensor.set_sensor('magnet', True, 100)
+    sensor.set_sensor('temp', True, 100)
+    #sensor.set_sensor('pressure', True, 100)
+    sensor.set_sensor('humidity', True, 100)
+    sensor.set_sensor('eco2', True, 100)
+    #sensor.set_sensor('tvoc', True, 100)
+
     # sensor.set_calibration('accel')
     sensor.get_status()
+    sensor.set_sensor('accel', False, 100)
+    sensor.set_sensor('magnet', False, 100)
+    sensor.set_sensor('temp', False, 100)
+    #sensor.set_sensor('pressure', False, 100)
+    sensor.set_sensor('humidity', False, 100)
+    sensor.set_sensor('eco2', False, 100)
+    #sensor.set_sensor('tvoc', False, 100)
+
+    #sensor.set_calibration('accel')
+    #sensor.set_storage('accel', True, 'test.txt')
+    #sensor.set_storage('accel', False, 'test.txt')
 
     """
     timeleft = time.time() + 3

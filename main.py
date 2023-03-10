@@ -233,8 +233,8 @@ class Kallisto:
 
     # 3.12 SET Calibration
 
-    def set_calibration(self, sensor):
-        self.write([0x0c, self.dict[sensor]])
+    def set_calibration(self, sensorID):
+        self.write([0x0c, self.dict[sensorID]])
         res = self.read()
         success = True
         for i in range(len(res)):
@@ -245,11 +245,11 @@ class Kallisto:
                 if res[i] != '0a':
                     success = False
             elif res[i] != '00':
-                print("Error calibrating sensor: " + sensor)
+                print("Error calibrating sensor: " + sensorID)
                 success = False
 
         if success:
-            print("Sensor: " + sensor + " successfully calibrated!")
+            print("Sensor: " + sensorID + " successfully calibrated!")
             return True
         else:
             return False

@@ -60,7 +60,6 @@ class Kallisto:
                     print("Timeout")
                     return False
         return result
-    
 
     # 3.1 Set Storage
     # Enables and disables data storage in Kallisto. Each sensor is enabled separately. Sensor ID and Filename must be provided.
@@ -87,8 +86,6 @@ class Kallisto:
         print(res)
         return res
 
-
-
     # 3.3 (sensor_name, true/false (enable,disable))
     def set_stream(self, sensorID, status):
         if status:
@@ -108,10 +105,15 @@ class Kallisto:
             print("Sensor: " + sensorID + " stream successfully disabled!")
         return True
 
-    # 3.3 SET Internet Connection TODO
 
-    # 3.5 (sensor_name, true/false (enable,disable), time)
+    # 3.4 SET Internet Connection
+    # Configures connection between Kallisto and the internet or MQTT Broker
+
+    # 3.5 SET Sensor
+    # Requests Kallisto to enable/disable a sensor with the provided Sensor ID and Sampling
+
     def set_sensor(self, sensorID, status, interval):
+
         if status:
             status = 0x01
         else:
@@ -121,18 +123,19 @@ class Kallisto:
         self.write([0x05, self.dict[sensorID], status] + list(interval.to_bytes(4, 'big')))
         res = self.read()
         success = True
+
         for i in range(len(res)):
             if (i == 0):
                 if res[i] != '12':
                     success = False
-  
+
             elif i == 14:
                 if res[i] != '0a':
                     success = False
             elif res[i] != '00':
                 print("Error Code: " + str(i) + " , Flag " + res[i])
                 success = False
-            
+
         if success:
             if status:
                 print("Sensor: " + sensorID + " successfully enabled!")
@@ -142,8 +145,6 @@ class Kallisto:
             print("Error setting sensor: " + sensorID)
         return success
 
-        
-        
     # 3.6 SET Erase
     # Requests Kallisto to erase file from its default storage method
 
@@ -157,7 +158,6 @@ class Kallisto:
             return False
         return True
 
-    
     # 3.7
     def set_rtc(self, month, day, year, weekday, hour, minutes, seconds, centiseconds):
         self.write([0x07] + convert_to_hex(month, day, year, weekday, hour, minutes, seconds, centiseconds))
@@ -178,16 +178,17 @@ class Kallisto:
         self.write([0x09, 0x01])
         res = self.read()
         print(res)
-        if (res[0] != '1e' or  res[3] != '0a'):
+        if (res[0] != '1e' or res[3] != '0a'):
             print("Error getting battery")
             return False
         soc = res[1]
         status = res[2]
         print("Battery: " + str(soc) + "%")
         print("Charging..." if status == '01' else "Not charging...")
-        
+
         return res
     
+
     # 3.10 GET Storage List
     # Requests Kallisto to provide list of files in the root directory of the default storage method.
 
@@ -197,17 +198,38 @@ class Kallisto:
         res = self.read()
         print(res)
         return res
-    
+
     # 3.11 GET Status
     # Requests Kallisto to provide the current status of each sensor. 
     # Including: if the sensor is enabled, if the sensor data is being stored, if the sensor data is being streamed and the current sampling period.
-
-    # TODO
     def get_status(self):
+        dict = {0: 'accel', 1: 'gyroscope', 2: 'magnet', 3: 'temp', 4: 'pressure', 5: 'humidity',
+                6: 'eco2', 7: 'tvoc', 8: 'light', 9: 'bvoc', 10: 'iaq', 11: 'noise', 12: 'micro'}
+
+
         self.write([0x0b, 0x01])
         res = self.read()
-        print(res)
-        return res
+        if res[0] != '23' and res[-1] != '0a':
+            print("Error getting status")
+            return False
+
+        res.pop()
+        res.pop(0)
+        idx = 0
+        res_dict = {}
+
+        for i in range(0, len(res), 7):
+            dict_aux = {}
+            dict_aux['Storage'] =  str(res[i])
+            dict_aux['Stream'] = str(res[i+1])
+            dict_aux['Sensor'] = str(res[i+2])
+            dict_aux['Frequency'] = str(res[i+3]) + " " + str(res[i+4]) + " " + str(res[i+5]) + " " + str(res[i+6])
+            res_dict[dict[idx]] = dict_aux
+            print("Sensor: " + dict[idx] + "; Storage: " + str(res[i]) + ", Stream: " + str(res[i+1]) + ", Sensor: " + str(res[i+2]) + ", Frequency: " + str(res[i+3]) + " " + str(res[i+4]) + " " + str(res[i+5]) + " " + str(res[i+6]) + "\n")
+            idx += 1
+
+        return res_dict
+
 
     # 3.12 SET Calibration
 
@@ -221,11 +243,11 @@ class Kallisto:
                     success = False
             elif i == 14:
                 if res[i] != '0a':
-                    success = False   
+                    success = False
             elif res[i] != '00':
                 print("Error calibrating sensor: " + sensor)
                 success = False
-                
+
         if success:
             print("Sensor: " + sensor + " successfully calibrated!")
             return True
@@ -240,7 +262,7 @@ class Kallisto:
                 read = read + sensor.SerialObj.read(bytesWaiting)
                 break
         return read
-      
+
 
 
 if __name__ == '__main__':
@@ -251,12 +273,30 @@ if __name__ == '__main__':
     for port, desc, hwid in sorted(ports):
         if "SER" in hwid:
             possible_ports[port] = hwid
-
+    print(possible_ports)
     sensor = Kallisto('COM3', possible_ports['COM3'])
-    sensor.set_sensor('accel', True, 100)
+
+    """sensor.set_sensor('accel', True, 100)
+    sensor.set_sensor('magnet', True, 100)
+    sensor.set_sensor('temp', True, 100)
+    #sensor.set_sensor('pressure', True, 100)
+    sensor.set_sensor('humidity', True, 100)
+    sensor.set_sensor('eco2', True, 100)
+    #sensor.set_sensor('tvoc', True, 100)
+
+    # sensor.set_calibration('accel')
+    sensor.get_status()
     sensor.set_sensor('accel', False, 100)
-    #sensor.set_storage('accel', True, 'test.txt')
-    #sensor.set_storage('accel', False, 'test.txt')
+    sensor.set_sensor('magnet', False, 100)
+    sensor.set_sensor('temp', False, 100)
+    #sensor.set_sensor('pressure', False, 100)
+    sensor.set_sensor('humidity', False, 100)
+    sensor.set_sensor('eco2', False, 100)
+    #sensor.set_sensor('tvoc', False, 100)"""
+
+
+
+
     """
     timeleft = time.time() + 3
   
@@ -266,7 +306,3 @@ if __name__ == '__main__':
             break
         timeleft = timeleft - time.time()
         """
-
-
-        
-        
